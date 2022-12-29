@@ -91,10 +91,28 @@ class ApiGate extends Controller
         return true;
     }
 
+    public function getTypedNumber($string)
+    {
+        $pattern = '/^(\d{1,3})((,)(\d{3}))*((\.)(\d{1,2}))?$|^(\d{1,3})((\.)(\d{3}))*((,)(\d{1,2}))?$/';
+        $replacement = '\1\8\4\11.\7\14';
+        $number = preg_replace($pattern, $replacement,$string);
+        if (is_numeric($number)){
+            if (strpos($number, ".") === false )  return intval($number);
+            else return floatval($number);
+        }
+        else return $string;
+    }
+
     public function walk_recursive(&$item, $key)
     {
         if (!empty($this->metas) and isset($this->metas[$key])) {
-           $item = $this->metas[$key];
+            $beString = ['cpf','areaCode','number'];
+            $this->metas[$key] = trim($this->metas[$key]);
+            if (in_array($key, $beString)) {
+                $item = (string) $this->metas[$key];
+            } else {
+                $item = $this->getTypedNumber(trim($this->metas[$key]));
+            }
         }
     }
 
@@ -113,15 +131,14 @@ class ApiGate extends Controller
             return false;
         }
         $borrowerMeta = BorrowerMeta::where('id_borrowers',$borrower->id)->get();
-        $this->metas['name'] = 'Maria rosario';
+        $this->metas['name'] = $borrower->name;
+        $this->metas['cpf'] = $borrower->cpf;
         
         foreach ($borrowerMeta as $meta) {
             $this->metas[$meta->field] = $meta->value;
         }
 
-        array_walk_recursive($this->jsonBase, ['self' , 'walk_recursive']);
-
-
+        array_walk_recursive($this->jsonBase, [$this , 'walk_recursive']);
 
         if (empty($this->clientId) or empty($this->token)) {
             $this->authenticate();
