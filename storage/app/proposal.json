@@ -1,0 +1,87 @@
+{
+  "amount": 1000,
+  "term": 9,
+  "loanObjective": "HomeBuying",
+  "product": "PersonalLoan",
+  "borrower": {
+    "name": "Exemplo nome",
+    "email": "user@example.com",
+    "educationalLevel": "Illiterate",
+    "gender": "Male",
+    "maritalStatus": "Married",
+    "mobilePhone": {
+      "areaCode": "11",
+      "number": "980356822"
+    },
+    "cpf": "06353689519",
+    "birthDate": "1988-12-27T15:34:53.584Z",
+    "address": {
+      "postalCode": "02461-011",
+      "streetAddress": "string",
+      "number": "123",
+      "additionalData": "string",
+      "neighborhood": "string",
+      "state": "string",
+      "city": "string",
+      "country": "string",
+      "residentSince": "2022-12-27T15:34:53.584Z"
+    },
+    "homeType": "Owned",
+    "bankAccount": {
+      "hasCheckbook": true,
+      "bankNumber": "string",
+      "branchNumber": "string",
+      "accountNumber": "string",
+      "accountNumberDigit": "string",
+      "accountType": "Checking",
+      "timeInMonths": 0
+    },
+    "monthlyGrossIncome": 10000,
+    "hasNegativeCreditRecord": true,
+    "occupation": {
+      "professionId": "string",
+      "description": "string",
+      "type": "RetiredOrPensioner",
+      "details": {
+        "company": "string",
+        "cnpj": "string",
+        "startDate": "2022-12-27T15:34:53.584Z",
+        "address": {
+          "postalCode": "02400-011",
+          "streetAddress": "string",
+          "number": "string",
+          "additionalData": "string",
+          "neighborhood": "string",
+          "state": "string",
+          "city": "string",
+          "country": "string",
+          "residentSince": "2022-12-27T15:34:53.584Z"
+        },
+        "monthlySalary": 0,
+        "phone": {
+          "areaCode": "11",
+          "number": "980356822"
+        },
+        "contractType": "Formal"
+      }
+    },
+    "inssNumber": "string",
+    "optin": true,
+    "hasVehicleAsWarranty": true,
+    "nationality": "Brazilian",
+    "birthPlace": {
+      "birthState": "string",
+      "birthCity": "string"
+    },
+    "document": {
+      "type": "RG",
+      "validFrom": "2000-12-27T15:34:53.584Z",
+      "value": "444888817",
+      "issuedBy": "CARTORI",
+      "uf": "string"
+    },
+    "motherName": "Nome Mae Exemplo",
+    "incomeProof": "PayslipOrPaycheck",
+    "hasRealEstateAsWarranty": true
+  }
+}
