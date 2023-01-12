@@ -16,7 +16,7 @@ class Borrower extends Model
      * @var array
      */
     protected $fillable = [
-        'id', 'name', 'cpf',
+        'id', 'name', 'cpf', 'proposal',
     ];
 
     public static function _firstOrCreate($f,$d){
@@ -26,4 +26,5 @@ class Borrower extends Model
         $f['cpf'] = preg_replace('/[^A-Za-z0-9]/', '', $f['cpf']);
         return parent::firstOrCreate($f,$d);
     }
+
 }

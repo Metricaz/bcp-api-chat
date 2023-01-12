@@ -17,8 +17,14 @@
     return $router->app->version();
 });*/
 
-
+$router->get('', function () {
+    return 'BPC api middleware';  
+});
+$router->get('/domains/objectives', 'ApiGate@objectives');
+$router->get('/domains/professions', 'ApiGate@professions');
 $router->get('/proposals', 'ApiGate@proposals');
 $router->post('/borrower', 'ApiGate@borrower');
+$router->post('/borrower/proposal', 'ApiGate@borrowerProposal');
 $router->post('/borrower/meta', 'ApiGate@borrowerMeta');
+$router->post('/borrower/metas', 'ApiGate@borrowerMetas');
 

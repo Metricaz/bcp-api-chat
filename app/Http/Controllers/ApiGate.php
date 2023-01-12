@@ -47,21 +47,173 @@ class ApiGate extends Controller
         return true;
     }
 
+    private function getDomains($url, $parm = null)
+    {
+       if (empty($this->clientId) or empty($this->token)) {
+            $this->authenticate();
+        } 
+        try {
+            $response = Http::withHeaders([
+                'authorization' => 'Bearer '.$this->token,
+                'Content-Type' => 'application/json'
+            ])->get($this->base_url.$url);
+        } catch (Exception $e) {
+            exit('falha na api BPC');
+        } 
+        return $response->body();
+    }
+
+    public function objectives()
+    {
+        $options = [
+            'text' => 'Selecione o motivo do Empréstimo',
+            'options' => [
+                [
+                    'text' => 'HomeBuying',
+                ],
+                [
+                    'text' => 'VehiclePurchase',            
+                ],
+                [
+                    'text' => 'Business',
+                ]
+            ],
+        ];
+ 
+        return response()->json($options);
+    }
+
+    public function professions(Request $request)
+    {
+        $inputs = $request->all();
+        if (!isset($inputs['occupation']) or empty($inputs['occupation'])) {
+           exit('occupation vazio');
+        }
+        $occupations = [
+            'Assalariado' => 'WageWorker',
+            'Funcionário Público' => 'PublicWorker',
+            'Aposentado ou Pensionista' => 'RetiredOrPensioner',
+            'Autônomo' => 'Autonomous',
+            'Profissional Liberal' => 'LiberalWorker',
+            'Empresário' => 'CompanyOwner',
+            'Estudante' => 'Student',
+        ];
+
+
+        if (!isset($occupations[$inputs['occupation']])) {
+           exit('occupation nao encontrado');
+        }
+        $occupation = $occupations[$inputs['occupation']];
+        $cachefile = 'occupation-'.strtolower($occupation).'.json';
+
+        if (!Storage::disk('local')->exists($cachefile)) {
+            $resp = $this->getDomains('domains/professions?occupationType='.$occupation);
+            Storage::disk('local')->put($cachefile,$resp);
+        } else {
+            $resp = Storage::disk('local')->get($cachefile);
+        }    
+        $dados = json_decode($resp,true);
+
+
+        $options = [
+            'text' => 'Selecione sua profissão (beta)',
+            'options' => [],
+        ];
+        foreach ($dados as $d) {
+            $options['options'][]['text'] = $d['description'];
+        }
+ 
+        return response()->json($options);
+    }
+
+
+
     public function borrower(Request $request)
     {
         $defaults = array(
             'name'=>'',
             'cpf'=>'',
         );
-        $inputs = array_merge($defaults, array_intersect_key($request->all(),$defaults));
+        $bodyContent = $request->getContent();
+        if (empty($bodyContent)) {
+            exit('falha');
+        }
+        $bodyContent = json_decode(utf8_encode($bodyContent),true);
+        if (is_null($bodyContent) or $bodyContent === FALSE) {
+            exit('json com erro');
+        }
+        $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
         if (empty($inputs['name']) or empty($inputs['cpf'])) {
             return false;
-        }
+        } 
         $borrower = Borrower::_firstOrCreate(
             ['cpf' => $inputs['cpf']],
             ['name' =>  $inputs['name']],
         );
-        return true;
+        return response()->json($borrower);
+    } 
+
+    public function borrowerProposal(Request $request)
+    {
+        $bodyContent = $request->getContent();
+        $gets = $request->all();
+        if (empty($bodyContent) or empty($gets)) {
+            exit('vazio');
+        }
+
+        $borrower = Borrower::updateOrCreate(
+            ['cpf' => $gets['cpf']],
+            ['proposal' =>  $bodyContent],
+        );
+        return response()->json($borrower);
+
+    }
+    public function borrowerMetas(Request $request)
+    {
+        $defaults = array(
+            'cpf'=>'',
+            'fields'=>'',
+        );
+        $bodyContent = $request->getContent();
+        if (empty($bodyContent)) {
+            exit('falha');
+        }
+        $bodyContent = json_decode(utf8_encode($bodyContent),true);
+
+        if (is_null($bodyContent) or $bodyContent === FALSE) {
+            exit('json com erro');
+        }
+
+        $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
+        if (empty($inputs['fields']) or !is_array($inputs['fields']) or empty($inputs['cpf'])) {
+            exit('inputs com erro');
+        } 
+         
+
+        $borrower = Borrower::where('cpf',$inputs['cpf'])->first();
+        if (empty($borrower)) {
+            exit('cpf nao encontrado');
+        }
+
+
+        $borrowerMeta = ['error'=>[],'success'=>[]]; 
+        foreach ($inputs['fields'][0] as $k => $v) {
+            if ( $v===true) {
+                 $v = 'true';
+            }
+            if ( $v===false) {
+                 $v = 'false';
+            }
+            $borrowerMeta['success'][] = BorrowerMeta::_updateOrCreate(
+                [
+                    'id_borrowers' => $borrower->id,
+                    'field' => $k,
+                ],
+                ['value' =>  $v],
+            );
+        } 
+       
+        return response()->json($borrowerMeta);
     }
 
     public function borrowerMeta(Request $request)
@@ -71,6 +223,18 @@ class ApiGate extends Controller
             'field'=>'',
             'value'=>'',
         );
+        $bodyContent = $request->getContent();
+        if (empty($bodyContent)) {
+            exit('falha');
+        }
+        $bodyContent = json_decode(utf8_encode($bodyContent),true);
+        if (is_null($bodyContent) or $bodyContent === FALSE) {
+            exit('json com erro');
+        }
+        $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
+        if (empty($inputs['name']) or empty($inputs['cpf'])) {
+            return false;
+        } 
         $inputs = array_merge($defaults, array_intersect_key($request->all(),$defaults));
         if (empty($inputs['field']) or empty($inputs['cpf']) or empty($inputs['value'])) {
             return false;
@@ -93,6 +257,15 @@ class ApiGate extends Controller
 
     public function getTypedNumber($string)
     {
+        if ($string===TRUE or $string===FALSE){
+            return $string; 
+        }
+        if ($string=='true'){
+            return true; 
+        }
+        if ($string=='false'){
+            return false; 
+        }
         $pattern = '/^(\d{1,3})((,)(\d{3}))*((\.)(\d{1,2}))?$|^(\d{1,3})((\.)(\d{3}))*((,)(\d{1,2}))?$/';
         $replacement = '\1\8\4\11.\7\14';
         $number = preg_replace($pattern, $replacement,$string);
@@ -105,18 +278,55 @@ class ApiGate extends Controller
 
     public function walk_recursive(&$item, $key)
     {
-        if (!empty($this->metas) and isset($this->metas[$key])) {
-            $beString = ['cpf','areaCode','number'];
-            $this->metas[$key] = trim($this->metas[$key]);
+        //if (!empty($this->metas) and isset($this->metas[$key])) {
+            $beString = ['cpf','cnpj','areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
+            //$this->metas[$key] = trim($this->metas[$key]);
             if (in_array($key, $beString)) {
-                $item = (string) $this->metas[$key];
+                $item = (string) $item;
             } else {
-                $item = $this->getTypedNumber(trim($this->metas[$key]));
+                $item = $this->getTypedNumber(trim($item));
             }
-        }
+        //}
     }
 
     public function proposals(Request $request)
+    {
+       $inputs = $request->all();
+        if (empty($inputs['cpf'])) {
+            return false;
+        }
+        
+        $borrower = Borrower::where('cpf',$inputs['cpf'])->first();
+        if (empty($borrower)) {
+            return false;
+        }
+        if (!isset($borrower->proposal) or empty($borrower->proposal)) {
+            exit('json vazio');
+        }
+
+        if (empty($this->clientId) or empty($this->token)) {
+            $this->authenticate();
+        }
+        $user_agent = $_SERVER['HTTP_USER_AGENT'];
+        $proposal = json_decode($borrower->proposal, true);
+        
+        array_walk_recursive($proposal , [$this , 'walk_recursive']);
+
+        try {
+            $response = Http::withHeaders([
+                'authorization' => 'Bearer '.$this->token,
+                'user-agent' => $user_agent,
+                'client-id' => $this->clientId,
+            ])->post($this->base_url.'proposals',$proposal);
+        } catch (Exception $e) {
+            exit('falha na api BPC');
+        } 
+        var_dump($proposal);
+        var_dump((string) $response->getBody());
+ 
+    }
+
+    /*public function proposals(Request $request)
     {
         $inputs = $request->all();
         if (empty($inputs['cpf'])) {
@@ -157,6 +367,6 @@ class ApiGate extends Controller
         var_dump((string) $response->getBody());
     
         return '';
-    }
+    }*/
 
 }
