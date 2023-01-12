@@ -47,9 +47,14 @@ class ApiGate extends Controller
         return true;
     }
 
-    private function getDomains($url, $parm = null)
+    private function getDomains($url, $cache = false)
     {
-       if (empty($this->clientId) or empty($this->token)) {
+        if ($cache!==false) {
+            if (Storage::disk('local')->exists($cache)) {
+                return Storage::disk('local')->get($cache);
+            } 
+        }
+        if (empty($this->clientId) or empty($this->token)) {
             $this->authenticate();
         } 
         try {
@@ -59,26 +64,24 @@ class ApiGate extends Controller
             ])->get($this->base_url.$url);
         } catch (Exception $e) {
             exit('falha na api BPC');
-        } 
-        return $response->body();
+        }
+        $resp = $response->body();
+        Storage::disk('local')->put($cache,$resp);
+        return $resp;
     }
 
     public function objectives()
     {
+        $cachefile = 'objectives.json';
+        $resp = $this->getDomains('domains/loan-objective',$cachefile);
+        $dados = json_decode($resp,true);
         $options = [
             'text' => 'Selecione o motivo do Empréstimo',
-            'options' => [
-                [
-                    'text' => 'HomeBuying',
-                ],
-                [
-                    'text' => 'VehiclePurchase',            
-                ],
-                [
-                    'text' => 'Business',
-                ]
-            ],
+            'options' => [],
         ];
+        foreach ($dados as $d) {
+            $options['options'][]['text'] = $d['description'];
+        }
  
         return response()->json($options);
     }
@@ -98,23 +101,14 @@ class ApiGate extends Controller
             'Empresário' => 'CompanyOwner',
             'Estudante' => 'Student',
         ];
-
-
         if (!isset($occupations[$inputs['occupation']])) {
            exit('occupation nao encontrado');
         }
         $occupation = $occupations[$inputs['occupation']];
+        
         $cachefile = 'occupation-'.strtolower($occupation).'.json';
-
-        if (!Storage::disk('local')->exists($cachefile)) {
-            $resp = $this->getDomains('domains/professions?occupationType='.$occupation);
-            Storage::disk('local')->put($cachefile,$resp);
-        } else {
-            $resp = Storage::disk('local')->get($cachefile);
-        }    
+        $resp = $this->getDomains('domains/professions?occupationType='.$occupation,$cachefile);
         $dados = json_decode($resp,true);
-
-
         $options = [
             'text' => 'Selecione sua profissão (beta)',
             'options' => [],
