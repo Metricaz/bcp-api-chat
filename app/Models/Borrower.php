@@ -16,7 +16,7 @@ class Borrower extends Model
      * @var array
      */
     protected $fillable = [
-        'id', 'name', 'cpf', 'proposal',
+        'id', 'name', 'cpf', 'proposal', 'proposaId',
     ];
 
     public static function _firstOrCreate($f,$d){

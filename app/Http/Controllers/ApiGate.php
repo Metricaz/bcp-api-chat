@@ -25,6 +25,16 @@ class ApiGate extends Controller
     private $token ='';
     private $metas = [];
     private $jsonBase = [];
+    private $occupationsTypes = [
+        'Assalariado' => 'WageWorker',
+        'Funcionário Público' => 'PublicWorker',
+        'Aposentado ou Pensionista' => 'RetiredOrPensioner',
+        'Autônomo' => 'Autonomous',
+        'Profissional Liberal' => 'LiberalWorker',
+        'Empresário' => 'CompanyOwner',
+        'Estudante' => 'Student',
+    ];
+    private $proposal = '';
 
     public function __construct()
     {
@@ -92,15 +102,7 @@ class ApiGate extends Controller
         if (!isset($inputs['occupation']) or empty($inputs['occupation'])) {
            exit('occupation vazio');
         }
-        $occupations = [
-            'Assalariado' => 'WageWorker',
-            'Funcionário Público' => 'PublicWorker',
-            'Aposentado ou Pensionista' => 'RetiredOrPensioner',
-            'Autônomo' => 'Autonomous',
-            'Profissional Liberal' => 'LiberalWorker',
-            'Empresário' => 'CompanyOwner',
-            'Estudante' => 'Student',
-        ];
+        $occupations = $this->occupationsTypes;
         if (!isset($occupations[$inputs['occupation']])) {
            exit('occupation nao encontrado');
         }
@@ -132,7 +134,7 @@ class ApiGate extends Controller
         if (empty($bodyContent)) {
             exit('falha');
         }
-        $bodyContent = json_decode(utf8_encode($bodyContent),true);
+        $bodyContent = json_decode($bodyContent,true);
         if (is_null($bodyContent) or $bodyContent === FALSE) {
             exit('json com erro');
         }
@@ -251,7 +253,7 @@ class ApiGate extends Controller
 
     public function getTypedNumber($string)
     {
-        if ($string===TRUE or $string===FALSE){
+        if (is_bool($string)){
             return $string; 
         }
         if ($string=='true'){
@@ -263,24 +265,39 @@ class ApiGate extends Controller
         $pattern = '/^(\d{1,3})((,)(\d{3}))*((\.)(\d{1,2}))?$|^(\d{1,3})((\.)(\d{3}))*((,)(\d{1,2}))?$/';
         $replacement = '\1\8\4\11.\7\14';
         $number = preg_replace($pattern, $replacement,$string);
+
         if (is_numeric($number)){
             if (strpos($number, ".") === false )  return intval($number);
             else return floatval($number);
         }
-        else return $string;
+        return $string;
     }
 
     public function walk_recursive(&$item, $key)
     {
-        //if (!empty($this->metas) and isset($this->metas[$key])) {
-            $beString = ['cpf','cnpj','areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
-            //$this->metas[$key] = trim($this->metas[$key]);
-            if (in_array($key, $beString)) {
-                $item = (string) $item;
-            } else {
-                $item = $this->getTypedNumber(trim($item));
+        
+        $beString = ['cpf','cnpj','areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
+        
+
+        if (in_array($key, $beString)) {
+            $item = (string) $item;
+        } else {
+            $item = $this->getTypedNumber(trim($item));
+        }
+        if ($key=='professionId') {
+            $occupation = $this->proposal['borrower']['occupation']['type'];
+            $cachefile = 'occupation-'.strtolower($occupation).'.json';
+            $json = $this->getDomains('domains/professions?occupationType='.$occupation,$cachefile);
+            if (!empty($json)) {        
+                $occupations = json_decode($json,true);
+                foreach ($occupations as $key => $occ) {
+                    if ($occ['description']==$item) {
+                        $item = $occ['id'];
+                    }
+                }
             }
-        //}
+        }    
+       
     }
 
     public function proposals(Request $request)
@@ -302,21 +319,39 @@ class ApiGate extends Controller
             $this->authenticate();
         }
         $user_agent = $_SERVER['HTTP_USER_AGENT'];
-        $proposal = json_decode($borrower->proposal, true);
+        $this->proposal = json_decode($borrower->proposal, true);
+
+        $type = $this->proposal['borrower']['occupation']['type'];
+        $occupationsTypes = $this->occupationsTypes;
+        if (isset($occupationsTypes[$type])) {
+            $type = $occupationsTypes[$type];
+        }
+        $this->proposal['borrower']['occupation']['type'] = $type;
         
-        array_walk_recursive($proposal , [$this , 'walk_recursive']);
+        array_walk_recursive($this->proposal , [$this , 'walk_recursive']);
 
         try {
             $response = Http::withHeaders([
                 'authorization' => 'Bearer '.$this->token,
                 'user-agent' => $user_agent,
                 'client-id' => $this->clientId,
-            ])->post($this->base_url.'proposals',$proposal);
+            ])->post($this->base_url.'proposals',$this->proposal);
         } catch (Exception $e) {
             exit('falha na api BPC');
         } 
-        var_dump($proposal);
-        var_dump((string) $response->getBody());
+        
+        $proposta = $response->json();
+        if ($response->successful() and !isset($proposta['errors'])) {
+            $borrower = Borrower::updateOrCreate(
+                ['cpf' => $inputs['cpf']],
+                ['proposaId' =>  $proposta['id']],
+            );
+            exit($proposta['id']);
+        } else{
+            var_dump($response);
+            exit('error');
+        }
+
  
     }
 
