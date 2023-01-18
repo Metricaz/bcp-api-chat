@@ -25,19 +25,31 @@ class ApiGate extends Controller
     private $token ='';
     private $metas = [];
     private $jsonBase = [];
-    private $occupationsTypes = [
-        'Assalariado' => 'WageWorker',
-        'Funcionário Público' => 'PublicWorker',
-        'Aposentado ou Pensionista' => 'RetiredOrPensioner',
-        'Autônomo' => 'Autonomous',
-        'Profissional Liberal' => 'LiberalWorker',
-        'Empresário' => 'CompanyOwner',
-        'Estudante' => 'Student',
-    ];
+    
     private $proposal = '';
-
+ 
     public function __construct()
     {
+    }
+
+    public function teste()
+    {
+        return '{
+    "text":"Choose an option",
+    "options":[
+        {
+            "text":"First option",
+            "type" :"text/plain",
+            "value": "aaaaaaaaaaaaaaaa"
+        },
+        {
+            "order":2,
+            "text":"Second option",
+            "type" :"text/plain",
+            "value": "bbbbbbbbb"
+        }
+    ]
+}'; 
     }
 
     private function authenticate()
@@ -80,6 +92,30 @@ class ApiGate extends Controller
         return $resp;
     }
 
+    public function domain($domain)
+    {
+        $cachefile = $domain.'.json';
+        $resp = $this->getDomains('domains/'.$domain,$cachefile);
+        $dados = json_decode($resp,true);
+        $options = [
+            'text' => 'Selecione o motivo do Empréstimo',
+            'options' => [],
+        ];
+        if (!is_array($dados)) {
+            return response('erro de chamada',500);
+        }
+        foreach ($dados as $d) {
+            $options['options'][] = array(
+                'text' => $d['description'],
+                'type' => "text/plain",
+                'value' => (string) $d['id'],
+            ); 
+        }
+
+        return response()->json($options);
+    }
+
+
     public function objectives()
     {
         $cachefile = 'objectives.json';
@@ -90,33 +126,37 @@ class ApiGate extends Controller
             'options' => [],
         ];
         foreach ($dados as $d) {
-            $options['options'][]['text'] = $d['description'];
+            $options['options'][] = array(
+                'text' => $d['description'],
+                'type' => "text/plain",
+                'value' => (string) $d['id'],
+            ); 
         }
- 
+
         return response()->json($options);
     }
 
     public function professions(Request $request)
     {
         $inputs = $request->all();
-        if (!isset($inputs['occupation']) or empty($inputs['occupation'])) {
+        if (!isset($inputs['occupation'])) {
            exit('occupation vazio');
         }
-        $occupations = $this->occupationsTypes;
-        if (!isset($occupations[$inputs['occupation']])) {
-           exit('occupation nao encontrado');
-        }
-        $occupation = $occupations[$inputs['occupation']];
+        $occupation = $inputs['occupation']; 
         
         $cachefile = 'occupation-'.strtolower($occupation).'.json';
         $resp = $this->getDomains('domains/professions?occupationType='.$occupation,$cachefile);
         $dados = json_decode($resp,true);
         $options = [
-            'text' => 'Selecione sua profissão (beta)',
+            'text' => 'Selecione sua profissão',
             'options' => [],
         ];
         foreach ($dados as $d) {
-            $options['options'][]['text'] = $d['description'];
+            $options['options'][] = array(
+                'text' => $d['description'],
+                'type' => "text/plain",
+                'value' => (string) $d['id'],
+            ); 
         }
  
         return response()->json($options);
@@ -146,7 +186,10 @@ class ApiGate extends Controller
             ['cpf' => $inputs['cpf']],
             ['name' =>  $inputs['name']],
         );
-        return response()->json($borrower);
+        if (!empty($borrower)) {
+            return response()->json($borrower,200);
+        }
+        return response('',500); 
     } 
 
     public function borrowerProposal(Request $request)
@@ -161,7 +204,10 @@ class ApiGate extends Controller
             ['cpf' => $gets['cpf']],
             ['proposal' =>  $bodyContent],
         );
-        return response()->json($borrower);
+        if (!empty($borrower)) {
+            return response()->json($borrower,200);
+        }
+        return response('',500);
 
     }
     public function borrowerMetas(Request $request)
@@ -302,32 +348,28 @@ class ApiGate extends Controller
 
     public function proposals(Request $request)
     {
-       $inputs = $request->all();
+
+
+        $inputs = $request->all();
         if (empty($inputs['cpf'])) {
-            return false;
+            return response('cpf vazio',400);
         }
         
         $borrower = Borrower::where('cpf',$inputs['cpf'])->first();
         if (empty($borrower)) {
-            return false;
+            return response('CPF não encontrado',400);
         }
         if (!isset($borrower->proposal) or empty($borrower->proposal)) {
-            exit('json vazio');
+            exit('proposta deste usuario nao encontrada');
         }
 
         if (empty($this->clientId) or empty($this->token)) {
             $this->authenticate();
         }
-        $user_agent = $_SERVER['HTTP_USER_AGENT'];
+        $user_agent = 'Mozilla';
         $this->proposal = json_decode($borrower->proposal, true);
 
-        $type = $this->proposal['borrower']['occupation']['type'];
-        $occupationsTypes = $this->occupationsTypes;
-        if (isset($occupationsTypes[$type])) {
-            $type = $occupationsTypes[$type];
-        }
-        $this->proposal['borrower']['occupation']['type'] = $type;
-        
+            
         array_walk_recursive($this->proposal , [$this , 'walk_recursive']);
 
         try {
@@ -337,23 +379,24 @@ class ApiGate extends Controller
                 'client-id' => $this->clientId,
             ])->post($this->base_url.'proposals',$this->proposal);
         } catch (Exception $e) {
-            exit('falha na api BPC');
+            return response('falha na api BPC',500);
         } 
+
         
-        $proposta = $response->json();
-        if ($response->successful() and !isset($proposta['errors'])) {
+        
+        if ($response->status()>=200 and $response->status()<300) {
+            $proposta = $response->json();
             $borrower = Borrower::updateOrCreate(
                 ['cpf' => $inputs['cpf']],
                 ['proposaId' =>  $proposta['id']],
             );
-            exit($proposta['id']);
-        } else{
-            var_dump($response);
-            exit('error');
+            return response($proposta['id'],201);
         }
-
- 
-    }
+        if ($response->status()>=400 and $response->status()<500) {
+            return response()->json($response->json(),400);
+        }
+        return response($response->getBody(),500);
+     }
 
     /*public function proposals(Request $request)
     {
