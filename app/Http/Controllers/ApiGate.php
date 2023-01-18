@@ -390,7 +390,7 @@ class ApiGate extends Controller
                 ['cpf' => $inputs['cpf']],
                 ['proposaId' =>  $proposta['id']],
             );
-            return response($proposta['id'],201);
+            return response($proposta['id'],200);
         }
         if ($response->status()>=400 and $response->status()<500) {
             return response()->json($response->json(),400);
