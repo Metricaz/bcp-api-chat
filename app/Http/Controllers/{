@@ -1,0 +1,84 @@
+{
+  "amount": "3000",
+  "term": "12",
+  "loanObjective": "4",
+  "borrower": {
+    "name": "Felipe Carlos",
+    "email": "jhbk@uhb.com",
+    "educationalLevel": "4",
+    "gender": "0",
+    "maritalStatus": "1",
+    "mobilePhone": {
+      "areaCode": "11",
+      "number": "45781245"
+    },
+    "cpf": "75549494035",
+    "birthDate": "28/10/1999",
+    "address": {
+      "postalCode": "02461-011",
+      "streetAddress": "gbndfhn",
+      "number": "54",
+      "additionalData": "",
+      "neighborhood": "rhyh",
+      "state": "rethg",
+      "city": "rbtnt",
+      "country": "rthy",
+      "residentSince": "28/10/2001"
+    },
+    "homeType": "0",
+    "bankAccount": {
+      "hasCheckbook": "Sim",
+      "bankNumber": "23456",
+      "branchNumber": "2435",
+      "accountNumber": "32657",
+      "accountNumberDigit": "45",
+      "accountType": "0",
+      "timeInMonths": "76"
+    },
+    "monthlyGrossIncome": "1000",
+    "hasNegativeCreditRecord": "Não",
+    "occupation": {
+      "professionId": "bde7aa23-ed2c-4f1a-bc65-6a1c5bae2725",
+      "description": "bde7aa23-ed2c-4f1a-bc65-6a1c5bae2725",
+      "type": "0",
+      "details": {
+        "company": "rebhb",
+        "startDate": "10/10/2020",
+        "address": {
+          "postalCode": "02461-011",
+          "streetAddress": "ryhuy",
+          "number": "356",
+          "neighborhood": "sdebgrt",
+          "state": "etg",
+          "city": "tgt",
+          "country": "thrt",
+          "residentSince": "20/01/2000"
+        },
+        "monthlySalary": "1000",
+        "phone": {
+          "areaCode": "11",
+          "number": "45781245"
+        },
+        "contractType": "0"
+      }
+    },
+    "inssNumber": "",
+    "optin": "Sim",
+    "hasVehicleAsWarranty": "Sim",
+    "nationality": "Brazilian",
+    "birthPlace": {
+      "birthState": "jgvefrh kjbr",
+      "birthCity": "yjhguj"
+    },
+    "document": {
+      "type": "0",
+      "validFrom": "10/10/2000",
+      "validUntil": "",
+      "value": "324564367",
+      "issuedBy": "37",
+      "uf": "ftgh"
+    },
+    "motherName": "rthy",
+    "incomeProof": "1"
+  }
+}

@@ -98,7 +98,7 @@ class ApiGate extends Controller
         $resp = $this->getDomains('domains/'.$domain,$cachefile);
         $dados = json_decode($resp,true);
         $options = [
-            'text' => 'Selecione o motivo do Empréstimo',
+            'text' => '',
             'options' => [],
         ];
         if (!is_array($dados)) {
@@ -122,8 +122,8 @@ class ApiGate extends Controller
         $resp = $this->getDomains('domains/loan-objective',$cachefile);
         $dados = json_decode($resp,true);
         $options = [
-            'text' => 'Selecione o motivo do Empréstimo',
-            'options' => [],
+            'text' => '',
+            'options' => [], 
         ];
         foreach ($dados as $d) {
             $options['options'][] = array(
@@ -302,16 +302,20 @@ class ApiGate extends Controller
         if (is_bool($string)){
             return $string; 
         }
-        if ($string=='true'){
+        if ($string=='true' or $string=='Sim'){
             return true; 
         }
-        if ($string=='false'){
+        if ($string=='false' or $string=='Não'){
             return false; 
         }
+
+        if (strlen($string)==10 and strpos($string, '/')!==FALSE ) {
+            return $this->convertDate($string);
+        }
+
         $pattern = '/^(\d{1,3})((,)(\d{3}))*((\.)(\d{1,2}))?$|^(\d{1,3})((\.)(\d{3}))*((,)(\d{1,2}))?$/';
         $replacement = '\1\8\4\11.\7\14';
         $number = preg_replace($pattern, $replacement,$string);
-
         if (is_numeric($number)){
             if (strpos($number, ".") === false )  return intval($number);
             else return floatval($number);
@@ -322,28 +326,23 @@ class ApiGate extends Controller
     public function walk_recursive(&$item, $key)
     {
         
-        $beString = ['cpf','cnpj','areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
+        $beString = ['cpf','cnpj','value', 'areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
         
-
         if (in_array($key, $beString)) {
             $item = (string) $item;
         } else {
             $item = $this->getTypedNumber(trim($item));
         }
-        if ($key=='professionId') {
-            $occupation = $this->proposal['borrower']['occupation']['type'];
-            $cachefile = 'occupation-'.strtolower($occupation).'.json';
-            $json = $this->getDomains('domains/professions?occupationType='.$occupation,$cachefile);
-            if (!empty($json)) {        
-                $occupations = json_decode($json,true);
-                foreach ($occupations as $key => $occ) {
-                    if ($occ['description']==$item) {
-                        $item = $occ['id'];
-                    }
-                }
-            }
-        }    
        
+    }
+
+    private function convertDate($data,$time = true){
+
+        $data = implode("-",array_reverse(explode("/",$data)));
+        if ($time) {
+            $data .= 'T00:00:00.000Z';
+        }
+        return $data;
     }
 
     public function proposals(Request $request)
@@ -368,10 +367,16 @@ class ApiGate extends Controller
         }
         $user_agent = 'Mozilla';
         $this->proposal = json_decode($borrower->proposal, true);
+        if ($this->proposal['borrower']['document']['type'] != '3') {
+            unset($this->proposal['borrower']['document']['validUntil']);
+        }
+        
 
-            
+
+
         array_walk_recursive($this->proposal , [$this , 'walk_recursive']);
 
+    
         try {
             $response = Http::withHeaders([
                 'authorization' => 'Bearer '.$this->token,
