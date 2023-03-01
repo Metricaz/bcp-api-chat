@@ -24,6 +24,8 @@ $router->get('/teste', 'ApiGate@teste');
 $router->get('/domain/{domain}', 'ApiGate@domain');
 $router->get('/domains/objectives', 'ApiGate@objectives');
 $router->get('/domains/professions', 'ApiGate@professions');
+$router->get('/financialInstitution', 'ApiGate@financialInstitution');
+$router->get('/locations/{cep}', 'ApiGate@locations');
 $router->get('/proposals', 'ApiGate@proposals');
 $router->post('/borrower', 'ApiGate@borrower');
 $router->post('/borrower/proposal', 'ApiGate@borrowerProposal');

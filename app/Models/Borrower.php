@@ -27,4 +27,12 @@ class Borrower extends Model
         return parent::firstOrCreate($f,$d);
     }
 
+    public static function _updateOrCreate($f,$d){
+        if (empty($d['name']) or empty($f['cpf'])) {
+            return false;
+        }
+        $f['cpf'] = preg_replace('/[^A-Za-z0-9]/', '', $f['cpf']);
+        return parent::updateOrCreate($f,$d);
+    }
+
 }

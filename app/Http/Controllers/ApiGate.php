@@ -16,11 +16,17 @@ class ApiGate extends Controller
      *
      * @return void
      */
-    private $base_url = 'https://api.stg.bompracredito.com.br/';
+    private $base_url = 'https://api-lead.bompracredito.com.br/';
+    //'https://api-lead.stg.bompracredito.com.br/'
+    //'https://api.stg.bompracredito.com.br/';
     private $data = [
-        'username'=>'adminqa',
-        'password'=>'AdminQA@2022'
+        'username'=>'chat-bot-metricaz-blog',
+        'password'=>'*2692dTQXab*'
     ];
+    /*
+    'username'=>'adminqa',
+        'password'=>'AdminQA@2022'
+    */
     private $clientId = '';
     private $token ='';
     private $metas = [];
@@ -28,29 +34,9 @@ class ApiGate extends Controller
     
     private $proposal = '';
  
-    public function __construct()
-    {
-    }
+    public function __construct(){  }
 
-    public function teste()
-    {
-        return '{
-    "text":"Choose an option",
-    "options":[
-        {
-            "text":"First option",
-            "type" :"text/plain",
-            "value": "aaaaaaaaaaaaaaaa"
-        },
-        {
-            "order":2,
-            "text":"Second option",
-            "type" :"text/plain",
-            "value": "bbbbbbbbb"
-        }
-    ]
-}'; 
-    }
+   
 
     private function authenticate()
     {
@@ -59,14 +45,29 @@ class ApiGate extends Controller
         } catch (Exception $e) {
             abort(503);
         } 
+        if ($response->status()>=200 and $response->status()<300) {
+            $dados = $response->json();
+            $this->clientId = $dados['clientId'];
+            $this->token = $dados['token'];        
+            return true;
+        }
+        return false;
+    }
 
-        $dados = $response->json();
-        $request = new Request;
-        $this->clientId = $dados['clientId'];
-        $this->token = $dados['token'];
-
-        
-        return true;
+    private function borrowers($cpf)
+    {
+        if (empty($this->clientId) or empty($this->token)) {
+            $this->authenticate();
+        } 
+        try {
+            $response = Http::withHeaders([
+                'authorization' => 'Bearer '.$this->token,
+                'Content-Type' => 'application/json'
+            ])->get($this->base_url.'borrowers?document='.$cpf);
+        } catch (Exception $e) {
+            return false;
+        }
+        return $response->body();        
     }
 
     private function getDomains($url, $cache = false)
@@ -115,6 +116,64 @@ class ApiGate extends Controller
         return response()->json($options);
     }
 
+    public function financialInstitution()
+    {
+        $cachefile = 'financialinstitution.json';
+        $resp = $this->getDomains('financialInstitution',$cachefile);
+        $dados = json_decode($resp,true);
+        $options = [
+            'text' => 'Selecione um Banco',
+            'options' => [],
+        ];
+        if (!is_array($dados)) {
+            return response('erro de chamada',500);
+        }
+        foreach ($dados as $d) {
+            $options['options'][] = array(
+                'text' => $d['code'].' - '.$d['name'],
+                'type' => "text/plain",
+                'value' => (string) $d['code'],
+            ); 
+        }
+
+        return response()->json($options);
+    }
+
+    public function locations($cep)
+    {
+        if (empty($cep)) {
+            return response('cep vazio',400);
+        }
+        if (empty($this->clientId) or empty($this->token)) {
+            $this->authenticate();
+        }
+        $user_agent = 'Mozilla';
+        try {
+            $response = Http::withHeaders([
+                'authorization' => 'Bearer '.$this->token,
+                'user-agent' => $user_agent,
+                'client-id' => $this->clientId,
+            ])->get($this->base_url.'locations/addresses/'.$cep);
+        } catch (Exception $e) {
+            return response('falha na api BPC',500);
+        } 
+
+        
+        if ($response->status()>=200 and $response->status()<300) {
+            $endereco = $response->json();
+            if (empty($endereco['city']) and !empty($endereco['streetAddress'])) {
+                $endereco['city'] = $endereco['streetAddress'];
+                $endereco['streetAddress'] = null;
+            }
+
+            return response()->json($endereco,200);
+        }
+        if ($response->status()>=400 and $response->status()<500) {
+            return response()->json($response->json(),400);
+        }
+        return response($response->getBody(),500);
+    }
+
 
     public function objectives()
     {
@@ -147,6 +206,9 @@ class ApiGate extends Controller
         $cachefile = 'occupation-'.strtolower($occupation).'.json';
         $resp = $this->getDomains('domains/professions?occupationType='.$occupation,$cachefile);
         $dados = json_decode($resp,true);
+        if (isset($dados['errors'])) {
+            return response('',500); 
+        }
         $options = [
             'text' => 'Selecione sua profissão',
             'options' => [],
@@ -182,9 +244,19 @@ class ApiGate extends Controller
         if (empty($inputs['name']) or empty($inputs['cpf'])) {
             return false;
         } 
-        $borrower = Borrower::_firstOrCreate(
+        $proposaId = null;
+        /*$borrowerApi = $this->borrowers($inputs['cpf']);
+        $borrowerApi = json_decode($borrowerApi, true);
+        if (isset($borrowerApi[0]['proposalsId'][0]) and !empty($borrowerApi[0]['proposalsId'][0])) {
+            $proposaId = $borrowerApi[0]['proposalsId'][0];
+        }*/
+        
+        $borrower = Borrower::_updateOrCreate(
             ['cpf' => $inputs['cpf']],
-            ['name' =>  $inputs['name']],
+            [
+                'name' =>  $inputs['name'],
+                'proposaId' =>  $proposaId
+            ],
         );
         if (!empty($borrower)) {
             return response()->json($borrower,200);
@@ -326,7 +398,7 @@ class ApiGate extends Controller
     public function walk_recursive(&$item, $key)
     {
         
-        $beString = ['cpf','cnpj','value', 'areaCode','number','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
+        $beString = ['cpf','cnpj','value', 'areaCode','number','postalCode','branchNumber','accountNumber','accountNumberDigit','bankNumber','professionId','inssNumber'];
         
         if (in_array($key, $beString)) {
             $item = (string) $item;
@@ -365,14 +437,12 @@ class ApiGate extends Controller
         if (empty($this->clientId) or empty($this->token)) {
             $this->authenticate();
         }
+
         $user_agent = 'Mozilla';
         $this->proposal = json_decode($borrower->proposal, true);
-        if ($this->proposal['borrower']['document']['type'] != '3') {
+        if ($this->proposal['borrower']['document']['type'] != '8') {
             unset($this->proposal['borrower']['document']['validUntil']);
         }
-        
-
-
 
         array_walk_recursive($this->proposal , [$this , 'walk_recursive']);
 
@@ -386,8 +456,6 @@ class ApiGate extends Controller
         } catch (Exception $e) {
             return response('falha na api BPC',500);
         } 
-
-        
         
         if ($response->status()>=200 and $response->status()<300) {
             $proposta = $response->json();
