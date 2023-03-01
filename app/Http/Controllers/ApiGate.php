@@ -54,11 +54,19 @@ class ApiGate extends Controller
         return false;
     }
 
+    public function teste($value='')
+    {
+        $teste = $this->borrowers('29023832825');
+
+        exit();
+    }
+
     private function borrowers($cpf)
     {
         if (empty($this->clientId) or empty($this->token)) {
             $this->authenticate();
-        } 
+        }
+        
         try {
             $response = Http::withHeaders([
                 'authorization' => 'Bearer '.$this->token,
@@ -67,7 +75,10 @@ class ApiGate extends Controller
         } catch (Exception $e) {
             return false;
         }
-        return $response->body();        
+        if ($response->status()>=200 and $response->status()<300) {
+            return $response->json();
+        }
+        return false;
     }
 
     private function getDomains($url, $cache = false)
@@ -234,22 +245,21 @@ class ApiGate extends Controller
         );
         $bodyContent = $request->getContent();
         if (empty($bodyContent)) {
-            exit('falha');
+            return response('body vazio',500);
         }
         $bodyContent = json_decode($bodyContent,true);
         if (is_null($bodyContent) or $bodyContent === FALSE) {
-            exit('json com erro');
+            return response('json com erro',500);
         }
         $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
         if (empty($inputs['name']) or empty($inputs['cpf'])) {
-            return false;
+            return response('name e cpf requeridos',500);
         } 
         $proposaId = null;
-        /*$borrowerApi = $this->borrowers($inputs['cpf']);
-        $borrowerApi = json_decode($borrowerApi, true);
+        $borrowerApi = $this->borrowers($inputs['cpf']);
         if (isset($borrowerApi[0]['proposalsId'][0]) and !empty($borrowerApi[0]['proposalsId'][0])) {
             $proposaId = $borrowerApi[0]['proposalsId'][0];
-        }*/
+        }
         
         $borrower = Borrower::_updateOrCreate(
             ['cpf' => $inputs['cpf']],
