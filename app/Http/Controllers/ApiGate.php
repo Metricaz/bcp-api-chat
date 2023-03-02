@@ -20,8 +20,8 @@ class ApiGate extends Controller
     //'https://api-lead.stg.bompracredito.com.br/'
     //'https://api.stg.bompracredito.com.br/';
     private $data = [
-        'username'=>'chat-bot-metricaz-blog',
-        'password'=>'*2692dTQXab*'
+        'username'=> '',
+        'password'=> ''
     ];
     /*
     'username'=>'adminqa',
@@ -34,7 +34,10 @@ class ApiGate extends Controller
     
     private $proposal = '';
  
-    public function __construct(){  }
+    public function __construct(){ 
+        $this->data['username'] = env('BPC_USERNAME','');
+        $this->data['password'] = env('BPC_PASS','');
+    }
 
    
 
@@ -58,6 +61,7 @@ class ApiGate extends Controller
     {
         $teste = $this->borrowers('29023832825');
 
+        var_dump($teste);
         exit();
     }
 
