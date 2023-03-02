@@ -16,17 +16,12 @@ class ApiGate extends Controller
      *
      * @return void
      */
-    private $base_url = 'https://api-lead.bompracredito.com.br/';
-    //'https://api-lead.stg.bompracredito.com.br/'
-    //'https://api.stg.bompracredito.com.br/';
+    private $base_url = '';
+    
     private $data = [
         'username'=> '',
         'password'=> ''
     ];
-    /*
-    'username'=>'adminqa',
-        'password'=>'AdminQA@2022'
-    */
     private $clientId = '';
     private $token ='';
     private $metas = [];
@@ -35,11 +30,10 @@ class ApiGate extends Controller
     private $proposal = '';
  
     public function __construct(){ 
+        $this->base_url = env('BPC_URL','');
         $this->data['username'] = env('BPC_USERNAME','');
         $this->data['password'] = env('BPC_PASS','');
     }
-
-   
 
     private function authenticate()
     {
