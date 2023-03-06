@@ -37,12 +37,33 @@ class ApiGate extends Controller
 
     private function authenticate()
     {
+        $file = 'token.json';
+        if (Storage::disk('local')->exists($file)) {
+            $time = Storage::lastModified($file);
+            $diff = time() - $time;
+            $fullDays    = floor($diff/(60*60*24));   
+            $fullHours   = floor(($diff-($fullDays*60*60*24))/(60*60));   
+            $fullMinutes = floor(($diff-($fullDays*60*60*24)-($fullHours*60*60))/60);    
+            if($fullMinutes<10){
+                $tokenJson = Storage::disk('local')->get($file);
+                $tokenJson = json_decode($tokenJson,true);
+                $this->clientId = $tokenJson['clientId'];
+                $this->token = $tokenJson['token'];        
+                return true;
+            }
+        } 
         try {
-            $response = Http::post($this->base_url.'auth',$this->data);
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json'
+            ])
+            ->timeout(120)
+            ->post($this->base_url.'auth',$this->data);
         } catch (Exception $e) {
+            echo 'erro no auth'; 
             abort(503);
         } 
         if ($response->status()>=200 and $response->status()<300) {
+            Storage::disk('local')->put($file,$response->body());
             $dados = $response->json();
             $this->clientId = $dados['clientId'];
             $this->token = $dados['token'];        
@@ -51,11 +72,19 @@ class ApiGate extends Controller
         return false;
     }
 
-    public function teste($value='')
+    public function teste()
     {
-        $teste = $this->borrowers('29023832825');
 
-        var_dump($teste);
+
+ 
+        exit();
+        $response = Http::withHeaders([
+                'Content-Type' => 'application/json'
+            ])
+            ->timeout(120)
+            ->post($this->base_url.'auth',$this->data);
+
+        var_dump($response->body());
         exit();
     }
 
