@@ -59,6 +59,17 @@ class ApiGate extends Controller
         exit();
     }
 
+    public function auth()
+    {
+        $this->authenticate();
+        return response()->json(
+            array(
+                'clientId' => $this->clientId,
+                'token' => $this->token,
+            )
+        ,200);
+    }
+
     private function borrowers($cpf)
     {
         if (empty($this->clientId) or empty($this->token)) {

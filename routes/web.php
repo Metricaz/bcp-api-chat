@@ -21,6 +21,7 @@ $router->get('', function () {
     return 'BPC api middleware';  
 });
 $router->get('/teste', 'ApiGate@teste');
+$router->get('/auth', 'ApiGate@auth');
 $router->get('/domain/{domain}', 'ApiGate@domain');
 $router->get('/domains/objectives', 'ApiGate@objectives');
 $router->get('/domains/professions', 'ApiGate@professions');
