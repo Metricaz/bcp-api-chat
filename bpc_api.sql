@@ -1,115 +1,50 @@
--- phpMyAdmin SQL Dump
--- version 5.1.1
--- https://www.phpmyadmin.net/
---
--- Host: 127.0.0.1
--- Tempo de geração: 29-Dez-2022 às 19:55
--- Versão do servidor: 10.4.22-MariaDB
--- versão do PHP: 7.4.21
+/*
+ Navicat Premium Data Transfer
 
-SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
-START TRANSACTION;
-SET time_zone = "+00:00";
+ Source Server         : Felipe
+ Source Server Type    : MySQL
+ Source Server Version : 50732
+ Source Host           : primario.mysql.dbaas.com.br:3306
+ Source Schema         : primario
 
+ Target Server Type    : MySQL
+ Target Server Version : 50732
+ File Encoding         : 65001
 
-/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
-/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
-/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8mb4 */;
+ Date: 06/03/2023 12:33:08
+*/
 
---
--- Banco de dados: `bpc_api`
---
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- --------------------------------------------------------
-
---
--- Estrutura da tabela `borrowers`
---
-
-CREATE TABLE `borrowers` (
-  `id` int(32) NOT NULL,
-  `name` tinytext NOT NULL,
-  `cpf` varchar(12) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Extraindo dados da tabela `borrowers`
---
-
-INSERT INTO `borrowers` (`id`, `name`, `cpf`, `created_at`) VALUES
-(1, 'Felipe Peixoto', '37652687802', '2022-12-28 15:54:28'),
-(2, 'felipe2', '0001', '2022-12-28 16:22:22'),
-(3, 'felipe2', '0001-66', '2022-12-28 16:25:58'),
-(4, 'felipe2', '000166', '2022-12-28 16:27:27');
-
--- --------------------------------------------------------
-
---
--- Estrutura da tabela `borrower_metas`
---
-
-CREATE TABLE `borrower_metas` (
-  `id` int(11) NOT NULL,
+-- ----------------------------
+-- Table structure for borrower_metas
+-- ----------------------------
+DROP TABLE IF EXISTS `borrower_metas`;
+CREATE TABLE `borrower_metas`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `id_borrowers` int(11) NOT NULL,
-  `field` varchar(20) NOT NULL,
-  `value` varchar(50) NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+  `field` varchar(50) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `value` varchar(50) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `created_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `id_borrowers`(`id_borrowers`) USING BTREE,
+  CONSTRAINT `fk` FOREIGN KEY (`id_borrowers`) REFERENCES `borrowers` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION
+) ENGINE = InnoDB AUTO_INCREMENT = 199 CHARACTER SET = latin1 COLLATE = latin1_swedish_ci ROW_FORMAT = Dynamic;
 
---
--- Extraindo dados da tabela `borrower_metas`
---
+-- ----------------------------
+-- Table structure for borrowers
+-- ----------------------------
+DROP TABLE IF EXISTS `borrowers`;
+CREATE TABLE `borrowers`  (
+  `id` int(32) NOT NULL AUTO_INCREMENT,
+  `name` tinytext CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `cpf` varchar(12) CHARACTER SET latin1 COLLATE latin1_swedish_ci NOT NULL,
+  `proposal` text CHARACTER SET latin1 COLLATE latin1_swedish_ci,
+  `proposaId` text CHARACTER SET latin1 COLLATE latin1_swedish_ci,
+  `created_at` timestamp(0) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `cpf`(`cpf`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 214 CHARACTER SET = latin1 COLLATE = latin1_swedish_ci ROW_FORMAT = Dynamic;
 
-INSERT INTO `borrower_metas` (`id`, `id_borrowers`, `field`, `value`, `created_at`) VALUES
-(2, 1, 'term', '9', '2022-12-28 19:27:54');
-
---
--- Índices para tabelas despejadas
---
-
---
--- Índices para tabela `borrowers`
---
-ALTER TABLE `borrowers`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `cpf` (`cpf`);
-
---
--- Índices para tabela `borrower_metas`
---
-ALTER TABLE `borrower_metas`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `id_borrowers` (`id_borrowers`);
-
---
--- AUTO_INCREMENT de tabelas despejadas
---
-
---
--- AUTO_INCREMENT de tabela `borrowers`
---
-ALTER TABLE `borrowers`
-  MODIFY `id` int(32) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT de tabela `borrower_metas`
---
-ALTER TABLE `borrower_metas`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- Restrições para despejos de tabelas
---
-
---
--- Limitadores para a tabela `borrower_metas`
---
-ALTER TABLE `borrower_metas`
-  ADD CONSTRAINT `fk` FOREIGN KEY (`id_borrowers`) REFERENCES `borrowers` (`id`);
-COMMIT;
-
-/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
-/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
-/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+SET FOREIGN_KEY_CHECKS = 1;
