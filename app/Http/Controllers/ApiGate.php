@@ -69,7 +69,9 @@ class ApiGate extends Controller
             $response = Http::withHeaders([
                 'authorization' => 'Bearer '.$this->token,
                 'Content-Type' => 'application/json'
-            ])->get($this->base_url.'borrowers?document='.$cpf);
+            ])
+            ->timeout(120)
+            ->get($this->base_url.'borrowers?document='.$cpf);
         } catch (Exception $e) {
             return false;
         }
@@ -77,6 +79,43 @@ class ApiGate extends Controller
             return $response->json();
         }
         return false;
+    }
+
+    public function borrower(Request $request)
+    {
+        $defaults = array(
+            'name'=>'',
+            'cpf'=>'',
+        );
+        $bodyContent = $request->getContent();
+        if (empty($bodyContent)) {
+            return response('body vazio',500);
+        }
+        $bodyContent = json_decode($bodyContent,true);
+        if (is_null($bodyContent) or $bodyContent === FALSE) {
+            return response('json com erro',500);
+        }
+        $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
+        if (empty($inputs['name']) or empty($inputs['cpf'])) {
+            return response('name e cpf requeridos',500);
+        } 
+        $proposaId = null;
+        $borrowerApi = $this->borrowers($inputs['cpf']);
+        if (isset($borrowerApi[0]['proposalsId'][0]) and !empty($borrowerApi[0]['proposalsId'][0])) {
+            $proposaId = $borrowerApi[0]['proposalsId'][0];
+        }
+        
+        $borrower = Borrower::_updateOrCreate(
+            ['cpf' => $inputs['cpf']],
+            [
+                'name' =>  $inputs['name'],
+                'proposaId' =>  $proposaId
+            ],
+        );
+        if (!empty($borrower)) {
+            return response()->json($borrower,200);
+        }
+        return response('',500); 
     }
 
     private function getDomains($url, $cache = false)
@@ -235,42 +274,7 @@ class ApiGate extends Controller
 
 
 
-    public function borrower(Request $request)
-    {
-        $defaults = array(
-            'name'=>'',
-            'cpf'=>'',
-        );
-        $bodyContent = $request->getContent();
-        if (empty($bodyContent)) {
-            return response('body vazio',500);
-        }
-        $bodyContent = json_decode($bodyContent,true);
-        if (is_null($bodyContent) or $bodyContent === FALSE) {
-            return response('json com erro',500);
-        }
-        $inputs = array_merge($defaults, array_intersect_key($bodyContent,$defaults));
-        if (empty($inputs['name']) or empty($inputs['cpf'])) {
-            return response('name e cpf requeridos',500);
-        } 
-        $proposaId = null;
-        $borrowerApi = $this->borrowers($inputs['cpf']);
-        if (isset($borrowerApi[0]['proposalsId'][0]) and !empty($borrowerApi[0]['proposalsId'][0])) {
-            $proposaId = $borrowerApi[0]['proposalsId'][0];
-        }
-        
-        $borrower = Borrower::_updateOrCreate(
-            ['cpf' => $inputs['cpf']],
-            [
-                'name' =>  $inputs['name'],
-                'proposaId' =>  $proposaId
-            ],
-        );
-        if (!empty($borrower)) {
-            return response()->json($borrower,200);
-        }
-        return response('',500); 
-    } 
+     
 
     public function borrowerProposal(Request $request)
     {
