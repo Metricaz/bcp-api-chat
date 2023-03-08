@@ -43,8 +43,9 @@ class ApiGate extends Controller
             $diff = time() - $time;
             $fullDays    = floor($diff/(60*60*24));   
             $fullHours   = floor(($diff-($fullDays*60*60*24))/(60*60));   
-            $fullMinutes = floor(($diff-($fullDays*60*60*24)-($fullHours*60*60))/60);    
-            if($fullMinutes<10){
+            $fullMinutes = floor(($diff-($fullDays*60*60*24)-($fullHours*60*60))/60);
+
+            if($fullMinutes<50){
                 $tokenJson = Storage::disk('local')->get($file);
                 $tokenJson = json_decode($tokenJson,true);
                 $this->clientId = $tokenJson['clientId'];
